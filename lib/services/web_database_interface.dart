@@ -10,8 +10,8 @@ import 'firebase_stub.dart'
 
 
 class DatabaseInterface {
-  static Firestore fsi;
-  static StreamSubscription<dynamic> listener;
+  static late Firestore fsi;
+  static late StreamSubscription<dynamic> listener;
 
   /// Does nothing in web. The app is already initialized in index.html
   initializeApp() async {

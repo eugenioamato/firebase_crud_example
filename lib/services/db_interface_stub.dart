@@ -13,7 +13,7 @@ class DatabaseInterface
   update(String s, String t, Map<String, String> map) {}
 
   StreamSubscription listen(String s, void Function(dynamic events) manageEvent) {
-    return null;
+    return Stream.periodic(Duration(seconds: 10)).listen((event) { });
   }
 
   delete(String s, String t) {}

@@ -9,7 +9,7 @@ if (dart.library.io)
 ;
 
 class DatabaseInterface {
-  static FirebaseFirestore fsi;
+  static late FirebaseFirestore fsi;
 
    /// Creates the Firebase connection, only needed in mobile version.
    /// (The Web version is connected in the index.html file)
@@ -41,7 +41,7 @@ class DatabaseInterface {
   /// Returns the data contained at Collection s, Document t
   /// The Map is not sorted, the key sorting depends on last activities
   Future<Map<String, dynamic>> read(String s, String t) async {
-    return (await fsi.collection(s).doc(t).get()).data();
+    return Future.value((await fsi.collection(s).doc(t).get()).data());
 
   }
 

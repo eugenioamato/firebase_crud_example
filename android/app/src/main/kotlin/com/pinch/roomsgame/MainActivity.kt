@@ -1,4 +1,4 @@
-package com.example.firebase_crudel
+package com.pinch.roomsgame
 
 import io.flutter.embedding.android.FlutterActivity
 

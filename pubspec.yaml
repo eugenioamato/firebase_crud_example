@@ -1,5 +1,5 @@
-name: firebase_crud_example
-description: An example to show crud operations in firebase
+name: roomsgame
+description: A multiplayer game with lobby based on firebase
 
 #  Flutter 2.0.0 • channel stable • https://github.com/flutter/flutter.git
 #  Framework • revision 60bd88df91 (25 hours ago) • 2021-03-03 09:13:17 -0800
@@ -10,14 +10,14 @@ description: An example to show crud operations in firebase
 version: 1.0.12
 
 environment:
-  sdk: ">=2.7.0 <3.0.0"
+  sdk: ">=2.12.0 <3.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   firebase_core: ^1.0.0
-  auto_size_text: ^2.1.0
-  visibility_detector: ^0.1.5
+  auto_size_text: ^3.0.0-nullsafety.0
+  visibility_detector: ^0.2.0
   cupertino_icons: ^1.0.1
   firebase: ^9.0.0
   #only mobile

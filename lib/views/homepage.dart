@@ -21,7 +21,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   ScrollController scrollController = ScrollController();
-  StreamSubscription listener;
+  late StreamSubscription listener;
 
   Key formKey = Key('form');
 
@@ -87,7 +87,7 @@ class _HomePageState extends State<HomePage> {
   String get dbMessages => _dbMessages.toString();
 
   Future<void> startListening() async {
-    listener = DatabaseInterface().listen('users', manageEvent);
+    listener = DatabaseInterface().listen('rooms', manageEvent);
   }
 
   actionButton(text, icon, func) => ElevatedButton(
@@ -122,7 +122,7 @@ class _HomePageState extends State<HomePage> {
 
     Helper.startLoading(refresh);
     DatabaseInterface()
-        .init('users', startListening);
+        .init('rooms', startListening);
   }
 
   dispose() {
@@ -141,6 +141,7 @@ class _HomePageState extends State<HomePage> {
   bool errorInConnectivity=false;
 
   void manageEvent(events) {
+
     if (waitingForFirstConnection)
       {
         if (events.toString()=='()')
@@ -159,6 +160,8 @@ class _HomePageState extends State<HomePage> {
           Helper.stopLoading(refresh);
         }
       }
+
+
     _dbMessages.clear();
     setState(() {
       _dbMessages.addAll(events);
@@ -179,14 +182,14 @@ class _HomePageState extends State<HomePage> {
   void _create() async {
     Helper.startLoading(refresh);
     try {
-      bool exists = await DatabaseInterface().exists('users', 'testUser');
+      bool exists = await DatabaseInterface().exists('rooms', 'testRoom');
     if (exists) {
       _showMessage('ERROR', 'ERROR ON CREATE: THE RECORD ALREADY EXISTS',
           'Awww...', Colors.red);
     } else {
-      await DatabaseInterface().set('users', 'testUser', {
-        'firstName': 'Sandro',
-        'lastName': 'Manzoni',
+      await DatabaseInterface().set('rooms', 'testRoom', {
+        'name': 'niceRoom',
+        'game': 'checkers',
       });
 
       _showMessage(
@@ -196,6 +199,7 @@ class _HomePageState extends State<HomePage> {
     }
     catch(e)
     {
+      print('error $e');
       if (e.toString().startsWith('[cloud_firestore/unavailable]'))
         {
           errorInConnectivity=true;
@@ -213,9 +217,9 @@ class _HomePageState extends State<HomePage> {
     try
     {
     Map<String, dynamic> rec =
-        await DatabaseInterface().read('users', 'testUser');
+        await DatabaseInterface().read('rooms', 'testRoom');
 
-    if (rec == null) {
+    if (rec.isEmpty) {
       _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND',
           'What a pity...', Colors.red);
     } else {
@@ -239,8 +243,8 @@ class _HomePageState extends State<HomePage> {
     Helper.startLoading(refresh);
 
     try {
-      DatabaseInterface().update('users', 'testUser', {
-        'firstName': 'Alessandro',
+      DatabaseInterface().update('rooms', 'testRoom', {
+        'game': 'Chess',
       }).then((_) {
         print("result _ is $_");
 
@@ -279,13 +283,13 @@ class _HomePageState extends State<HomePage> {
     Helper.startLoading(refresh);
     try
     {
-    bool exists = await DatabaseInterface().exists('users', 'testUser');
+    bool exists = await DatabaseInterface().exists('rooms', 'testRoom');
 
     if (!exists) {
       _showMessage('ERROR', 'ERROR ON DELETE: THE RECORD DOESN`T EXIST',
           'Can`t I delete the void?', Colors.red);
     } else {
-      await DatabaseInterface().delete('users', 'testUser');
+      await DatabaseInterface().delete('rooms', 'testRoom');
       _showMessage('Success!', 'Record deleted Successfully!',
           'I will miss it!', Colors.black);
     }
