@@ -4,15 +4,14 @@ import 'dart:ui';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
+import 'package:roomsgame/models/room.dart';
+import 'package:roomsgame/views/roompage.dart';
 import '../helper.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-
 import '../services/db_interface_stub.dart'
-  if (dart.library.io)
-  '../services/database_interface.dart'
-  if (dart.library.html)
-       '../services/web_database_interface.dart';
+    if (dart.library.io) '../services/database_interface.dart'
+    if (dart.library.html) '../services/web_database_interface.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -30,22 +29,31 @@ class _HomePageState extends State<HomePage> {
   String formCaption = 'Ready!';
   Color formColor = Colors.black;
   bool formVisible = true;
-  bool waitingForFirstConnection=true;
+  bool waitingForFirstConnection = true;
 
   List _dbMessages = [];
+
+  var nameController=TextEditingController();
 
   List<Widget> get pageItems => [
         Image.asset(
           'assets/images/flutter_logo.png',
           height: vstep * 8.0,
         ),
-        Image.asset(
-          'assets/images/firebase_logo.png',
-          height: vstep * 7.0,
-        ),
         SizedBox(
           height: vstep * 2.0,
         ),
+
+        Container(
+          height: 200,
+          child: ListView(
+            padding: EdgeInsets.symmetric(horizontal: step*6),
+            children: [
+          Text('Please insert your name',textAlign: TextAlign.center,style: h2Style,),
+          TextField(controller: nameController,),
+          ],),
+        ),
+        SizedBox(height: 40,),
         Center(
             child: VisibilityDetector(
           key: formKey,
@@ -62,41 +70,37 @@ class _HomePageState extends State<HomePage> {
         SizedBox(
           height: vstep,
         ),
-        actionButton('Create', Icons.create, _create),
+        buildRoomList(dbMessages),
         SizedBox(
           height: vstep,
         ),
-        actionButton('Read', Icons.read_more, _read),
-        SizedBox(
-          height: vstep,
-        ),
-        actionButton('Update', Icons.update, _update),
-        SizedBox(
-          height: vstep,
-        ),
-        actionButton('Delete', Icons.delete, _delete),
-        SizedBox(
-          height: vstep,
-        ),
-        AutoSizeText(dbMessages),
-        SizedBox(
-          height: vstep,
-        ),
+    Center(
+      child: Container(
+        padding: EdgeInsets.all(20),
+        color: Colors.green,
+        child: TextButton(onPressed: createNewRoom,
+            child:Text('Create new Room',
+            style: h2Style,
+            )),
+      ),
+    ),
+    SizedBox(height: 40,)
       ];
 
-  String get dbMessages => _dbMessages.toString();
+  List<dynamic> get dbMessages => _dbMessages;
+
+  get h2Style => TextStyle(color: Colors.black,fontSize: 22);
+  get h3Style => TextStyle(color: Colors.black,fontSize: 18);
 
   Future<void> startListening() async {
     listener = DatabaseInterface().listen('rooms', manageEvent);
   }
 
   actionButton(text, icon, func) => ElevatedButton(
-    style
-        : ButtonStyle(
-        backgroundColor:MaterialStateProperty.all<Color>(Colors.amberAccent),
-      foregroundColor: MaterialStateProperty.all<Color>(Colors.black),
-
-    ),
+        style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.all<Color>(Colors.amberAccent),
+          foregroundColor: MaterialStateProperty.all<Color>(Colors.black),
+        ),
         child: Flex(direction: Axis.horizontal, children: [
           Expanded(child: Icon(icon)),
           Expanded(
@@ -111,18 +115,15 @@ class _HomePageState extends State<HomePage> {
         onPressed: Helper.isLoading() ? null : func,
       );
 
-  void refresh(){
-    if (mounted)
-    setState(() {
-    });
+  void refresh() {
+    if (mounted) setState(() {});
   }
 
   initState() {
     super.initState();
 
     Helper.startLoading(refresh);
-    DatabaseInterface()
-        .init('rooms', startListening);
+    DatabaseInterface().init('rooms', startListening);
   }
 
   dispose() {
@@ -134,35 +135,30 @@ class _HomePageState extends State<HomePage> {
     SnackBar errorSnackBar = SnackBar(
       content: Text('No Internet connection!'),
       backgroundColor: Colors.red,
-      duration: Duration(seconds: short?5:5000),
+      duration: Duration(seconds: short ? 5 : 5000),
     );
     ScaffoldMessenger.of(context).showSnackBar(errorSnackBar);
   }
-  bool errorInConnectivity=false;
+
+  bool errorInConnectivity = false;
 
   void manageEvent(events) {
-
-    if (waitingForFirstConnection)
-      {
-        if (events.toString()=='()')
-        {
-          showErrorSnackbar(false);
-          errorInConnectivity=true;
+    if (waitingForFirstConnection) {
+      if (events.toString() == '()') {
+        showErrorSnackbar(false);
+        errorInConnectivity = true;
+      } else {
+        if (errorInConnectivity) {
+          errorInConnectivity = false;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
         }
-        else
-        {
-          if (errorInConnectivity)
-            {
-              errorInConnectivity=false;
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            }
-          waitingForFirstConnection = false;
-          Helper.stopLoading(refresh);
-        }
+        waitingForFirstConnection = false;
+        Helper.stopLoading(refresh);
       }
-
+    }
 
     _dbMessages.clear();
+
     setState(() {
       _dbMessages.addAll(events);
     });
@@ -183,30 +179,25 @@ class _HomePageState extends State<HomePage> {
     Helper.startLoading(refresh);
     try {
       bool exists = await DatabaseInterface().exists('rooms', 'testRoom');
-    if (exists) {
-      _showMessage('ERROR', 'ERROR ON CREATE: THE RECORD ALREADY EXISTS',
-          'Awww...', Colors.red);
-    } else {
-      await DatabaseInterface().set('rooms', 'testRoom', {
-        'name': 'niceRoom',
-        'game': 'checkers',
-      });
+      if (exists) {
+        _showMessage('ERROR', 'ERROR ON CREATE: THE RECORD ALREADY EXISTS',
+            'Awww...', Colors.red);
+      } else {
+        await DatabaseInterface().set('rooms', 'testRoom', {
+          'name': 'niceRoom',
+          'game': 'checkers',
+        });
 
-      _showMessage(
-          'Success!', 'Record written Successfully', 'Ok!', Colors.black);
-    }
-
-    }
-    catch(e)
-    {
+        _showMessage(
+            'Success!', 'Record written Successfully', 'Ok!', Colors.black);
+      }
+    } catch (e) {
       print('error $e');
-      if (e.toString().startsWith('[cloud_firestore/unavailable]'))
-        {
-          errorInConnectivity=true;
-          waitingForFirstConnection=true;
-          showErrorSnackbar(true);
-
-        }
+      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
+        errorInConnectivity = true;
+        waitingForFirstConnection = true;
+        showErrorSnackbar(true);
+      }
     }
 
     Helper.stopLoading(refresh);
@@ -214,27 +205,24 @@ class _HomePageState extends State<HomePage> {
 
   void _read() async {
     Helper.startLoading(refresh);
-    try
-    {
-    Map<String, dynamic> rec =
-        await DatabaseInterface().read('rooms', 'testRoom');
+    try {
+      Map<String, dynamic> rec =
+          await DatabaseInterface().read('rooms', 'testRoom');
 
-    if (rec.isEmpty) {
-      _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND',
-          'What a pity...', Colors.red);
-    } else {
-      SplayTreeMap<String, dynamic> record = SplayTreeMap.from(rec);
-      _showMessage('Success!', 'Data found: $record', 'Got it!', Colors.black);
-    }
-
-    }
-    catch(e)
-    {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]'))
-      {
-        errorInConnectivity=true;
-        waitingForFirstConnection=true;
-        showErrorSnackbar(true);}
+      if (rec.isEmpty) {
+        _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND',
+            'What a pity...', Colors.red);
+      } else {
+        SplayTreeMap<String, dynamic> record = SplayTreeMap.from(rec);
+        _showMessage(
+            'Success!', 'Data found: $record', 'Got it!', Colors.black);
+      }
+    } catch (e) {
+      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
+        errorInConnectivity = true;
+        waitingForFirstConnection = true;
+        showErrorSnackbar(true);
+      }
     }
     Helper.stopLoading(refresh);
   }
@@ -250,7 +238,7 @@ class _HomePageState extends State<HomePage> {
 
         _showMessage(
             'Success!',
-            'Record updated Successfully! The name is changed to Alessandro',
+            'Record updated Successfully! The game is changed to Checkers',
             'Ok, thank you!',
             Colors.black);
         Helper.stopLoading(refresh);
@@ -265,43 +253,33 @@ class _HomePageState extends State<HomePage> {
         }
         Helper.stopLoading(refresh);
       });
-
-  }
-  catch(e)
-  {
-  if (e.toString().startsWith('[cloud_firestore/unavailable]'))
-  {
-  errorInConnectivity=true;
-  waitingForFirstConnection=true;
-  showErrorSnackbar(true);
-  Helper.stopLoading(refresh);
-  }
-  }
+    } catch (e) {
+      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
+        errorInConnectivity = true;
+        waitingForFirstConnection = true;
+        showErrorSnackbar(true);
+        Helper.stopLoading(refresh);
+      }
+    }
   }
 
   void _delete() async {
     Helper.startLoading(refresh);
-    try
-    {
-    bool exists = await DatabaseInterface().exists('rooms', 'testRoom');
+    try {
+      bool exists = await DatabaseInterface().exists('rooms', 'testRoom');
 
-    if (!exists) {
-      _showMessage('ERROR', 'ERROR ON DELETE: THE RECORD DOESN`T EXIST',
-          'Can`t I delete the void?', Colors.red);
-    } else {
-      await DatabaseInterface().delete('rooms', 'testRoom');
-      _showMessage('Success!', 'Record deleted Successfully!',
-          'I will miss it!', Colors.black);
-    }
-
-
-    }
-    catch(e)
-    {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]'))
-      {
-        errorInConnectivity=true;
-        waitingForFirstConnection=true;
+      if (!exists) {
+        _showMessage('ERROR', 'ERROR ON DELETE: THE RECORD DOESN`T EXIST',
+            'Can`t I delete the void?', Colors.red);
+      } else {
+        await DatabaseInterface().delete('rooms', 'testRoom');
+        _showMessage('Success!', 'Record deleted Successfully!',
+            'I will miss it!', Colors.black);
+      }
+    } catch (e) {
+      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
+        errorInConnectivity = true;
+        waitingForFirstConnection = true;
         showErrorSnackbar(true);
       }
     }
@@ -348,4 +326,59 @@ class _HomePageState extends State<HomePage> {
         ));
   }
 
+  Widget buildRoomList(List<dynamic> dbMessageList) {
+    print(dbMessageList);
+
+    final rooms = <Room>[];
+
+    for (var r in dbMessageList) {
+      try {
+        final room = Room.fromJson(r);
+        print('Room:$room');
+        rooms.add(room);
+      } catch (e) {
+        print(e);
+      }
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      itemBuilder: (BuildContext context, int index) {
+        Room r = rooms[index];
+        return ListTile(
+            leading: Text(r.id,style: h3Style,),
+            title: Text(
+              r.name,
+              textAlign: TextAlign.center,
+              style: h3Style,
+            ),
+            trailing: Text(r.game,style: h3Style,),
+            tileColor: Color.fromARGB(100, 212, 100, 100)
+        ,
+          onTap: ()=>openRoom(r),
+        );
+      },
+      separatorBuilder: (BuildContext context, int index) {
+        return SizedBox(
+          height: 8,
+        );
+      },
+      itemCount: rooms.length,
+    );
+  }
+
+  openRoom(Room r) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => RoomPage(r,nameController.text)),
+    );
+
+  }
+
+  void createNewRoom() {
+
+
+
+  }
 }
