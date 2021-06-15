@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
-import '../helper.dart';
+import '../loading_state_helper.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../services/db_interface_stub.dart'
@@ -28,6 +28,7 @@ class _HomePageState extends State<HomePage> {
   bool formVisible = true;
   bool waitingForFirstConnection = true;
   List _dbMessages = [];
+  late LoadingStateHelper _helper;
 
   String get dbMessages => _dbMessages.toString();
 
@@ -41,8 +42,8 @@ class _HomePageState extends State<HomePage> {
 
   initState() {
     super.initState();
-
-    Helper.startLoading(refresh);
+    _helper=LoadingStateHelper();
+    _helper.startLoading(refresh);
     DatabaseInterface().init('users', startListening);
   }
 
@@ -73,7 +74,7 @@ class _HomePageState extends State<HomePage> {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
         }
         waitingForFirstConnection = false;
-        Helper.stopLoading(refresh);
+        _helper.stopLoading(refresh);
       }
     }
     _dbMessages.clear();
@@ -91,7 +92,7 @@ class _HomePageState extends State<HomePage> {
 
 
   void _create() async {
-    Helper.startLoading(refresh);
+    _helper.startLoading(refresh);
     try {
       bool exists = await DatabaseInterface().exists('users', 'testUser');
       if (exists) {
@@ -112,11 +113,11 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    Helper.stopLoading(refresh);
+    _helper.stopLoading(refresh);
   }
 
   void _read() async {
-    Helper.startLoading(refresh);
+    _helper.startLoading(refresh);
     try {
       Map<String, dynamic>? rec = await DatabaseInterface().read('users', 'testUser');
 
@@ -136,11 +137,11 @@ class _HomePageState extends State<HomePage> {
         _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND', 'What a pity...', Colors.red);
       }
     }
-    Helper.stopLoading(refresh);
+    _helper.stopLoading(refresh);
   }
 
   void _update() async {
-    Helper.startLoading(refresh);
+    _helper.startLoading(refresh);
 
     try {
       DatabaseInterface().update('users', 'testUser', {
@@ -148,7 +149,7 @@ class _HomePageState extends State<HomePage> {
       }).then((_) {
         _showMessage('Success!', 'Record updated Successfully! The name is changed to Alessandro', 'Ok, thank you!',
             Colors.black);
-        Helper.stopLoading(refresh);
+        _helper.stopLoading(refresh);
       }).catchError((e) {
         if ((e.toString().startsWith("[cloud_firestore/not-found]")) ||
             (e.toString().startsWith("FirebaseError: Requested entity was not found"))) {
@@ -156,20 +157,20 @@ class _HomePageState extends State<HomePage> {
         } else {
           _showMessage('ERROR', 'Error on update:${e.toString()}', 'Ok', Colors.red);
         }
-        Helper.stopLoading(refresh);
+        _helper.stopLoading(refresh);
       });
     } catch (e) {
       if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
         errorInConnectivity = true;
         waitingForFirstConnection = true;
         showErrorSnackbar('No Internet connection!', true);
-        Helper.stopLoading(refresh);
+        _helper.stopLoading(refresh);
       }
     }
   }
 
   void _delete() async {
-    Helper.startLoading(refresh);
+    _helper.startLoading(refresh);
     try {
       bool exists = await DatabaseInterface().exists('users', 'testUser');
 
@@ -186,7 +187,7 @@ class _HomePageState extends State<HomePage> {
         showErrorSnackbar('No Internet connection!', true);
       }
     }
-    Helper.stopLoading(refresh);
+    _helper.stopLoading(refresh);
   }
 
   @override
@@ -210,7 +211,7 @@ class _HomePageState extends State<HomePage> {
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
               toolbarHeight: vstep,
-              title: Helper.isLoading()
+              title: _helper.isLoading()
                   ? LinearProgressIndicator(minHeight: vstep)
                   : Container(
                       color: Colors.transparent,
@@ -293,7 +294,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     ]),
-    onPressed: Helper.isLoading() ? null : func,
+    onPressed: _helper.isLoading() ? null : func,
   );
 
 }
