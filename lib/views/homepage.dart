@@ -1,15 +1,13 @@
 import 'dart:async';
-import 'dart:collection';
-import 'dart:ui';
+
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:firebase_crud_example/services/data_repository.dart';
 import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
 import '../loading_state_helper.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-import '../services/db_interface_stub.dart'
-    if (dart.library.io) '../services/database_interface.dart'
-    if (dart.library.html) '../services/web_database_interface.dart';
+import 'custom_action_button.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -29,11 +27,12 @@ class _HomePageState extends State<HomePage> {
   bool waitingForFirstConnection = true;
   List _dbMessages = [];
   late LoadingStateHelper _helper;
+  late DataRepository _dataRepository;
 
   String get dbMessages => _dbMessages.toString();
 
   Future<void> startListening() async {
-    listener = DatabaseInterface().listen('users', manageEvent);
+    listener = _dataRepository.listen('users', manageEvent);
   }
 
   void refresh() {
@@ -41,14 +40,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   initState() {
-    super.initState();
-    _helper=LoadingStateHelper();
+    _helper = LoadingStateHelper();
     _helper.startLoading(refresh);
-    DatabaseInterface().init('users', startListening);
+    _dataRepository = DataRepository(startListening);
+    super.initState();
   }
 
   dispose() {
     listener.cancel();
+    scrollController.dispose();
     super.dispose();
   }
 
@@ -90,104 +90,69 @@ class _HomePageState extends State<HomePage> {
     if (!formVisible) scrollController.animateTo(0, duration: Duration(seconds: 1), curve: Curves.linear);
   }
 
+  void _noConnectivity() {
+    errorInConnectivity = true;
+    waitingForFirstConnection = true;
+    showErrorSnackbar('No Internet connection!', true);
+  }
 
-  void _create() async {
-    _helper.startLoading(refresh);
-    try {
-      bool exists = await DatabaseInterface().exists('users', 'testUser');
-      if (exists) {
-        _showMessage('ERROR', 'ERROR ON CREATE: THE RECORD ALREADY EXISTS', 'Awww...', Colors.red);
-      } else {
-        await DatabaseInterface().set('users', 'testUser', {
-          'firstName': 'Sandro',
-          'lastName': 'Manzoni',
-        });
-
-        _showMessage('Success!', 'Record written Successfully', 'Ok!', Colors.black);
-      }
-    } catch (e) {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
-        errorInConnectivity = true;
-        waitingForFirstConnection = true;
-        showErrorSnackbar('No Internet connection!', true);
-      }
-    }
-
-    _helper.stopLoading(refresh);
+  void _create() {
+    _dataRepository.createData(
+      'users',
+      'testUser',
+      <String, dynamic>{
+        'firstName': 'Sandro',
+        'lastName': 'Manzoni',
+      },
+      'Record written Successfully',
+      'ERROR ON CREATE: THE RECORD ALREADY EXISTS',
+      _helper,
+      refresh,
+      _showMessage,
+      _noConnectivity,
+    );
   }
 
   void _read() async {
-    _helper.startLoading(refresh);
-    try {
-      Map<String, dynamic>? rec = await DatabaseInterface().read('users', 'testUser');
-
-      if (rec == null) {
-        //can only happen on mobile version
-        _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND', 'What a pity...', Colors.red);
-      } else {
-        SplayTreeMap<String, dynamic> record = SplayTreeMap.from(rec);
-        _showMessage('Success!', 'Data found: $record', 'Got it!', Colors.black);
-      }
-    } catch (e) {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
-        errorInConnectivity = true;
-        waitingForFirstConnection = true;
-        showErrorSnackbar('No Internet connection!', true);
-      } else {
-        _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND', 'What a pity...', Colors.red);
-      }
-    }
-    _helper.stopLoading(refresh);
+    _dataRepository.readData(
+      'users',
+      'testUser',
+      'Data found',
+      'ERROR ON READ, THE RECORD WAS NOT FOUND',
+      _helper,
+      refresh,
+      _showMessage,
+      _noConnectivity,
+    );
   }
 
   void _update() async {
-    _helper.startLoading(refresh);
-
-    try {
-      DatabaseInterface().update('users', 'testUser', {
+    _dataRepository.updateData(
+      'users',
+      'testUser',
+      {
         'firstName': 'Alessandro',
-      }).then((_) {
-        _showMessage('Success!', 'Record updated Successfully! The name is changed to Alessandro', 'Ok, thank you!',
-            Colors.black);
-        _helper.stopLoading(refresh);
-      }).catchError((e) {
-        if ((e.toString().startsWith("[cloud_firestore/not-found]")) ||
-            (e.toString().startsWith("FirebaseError: Requested entity was not found"))) {
-          _showMessage('ERROR', 'ERROR ON UPDATE, THE RECORD WAS NOT FOUND', 'Cannot update? WTF!', Colors.red);
-        } else {
-          _showMessage('ERROR', 'Error on update:${e.toString()}', 'Ok', Colors.red);
-        }
-        _helper.stopLoading(refresh);
-      });
-    } catch (e) {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
-        errorInConnectivity = true;
-        waitingForFirstConnection = true;
-        showErrorSnackbar('No Internet connection!', true);
-        _helper.stopLoading(refresh);
-      }
-    }
+      },
+      'Record updated Successfully! The name is changed to Alessandro',
+      'ERROR ON UPDATE, THE RECORD WAS NOT FOUND',
+      _helper,
+      refresh,
+      _showMessage,
+      _noConnectivity,
+    );
   }
 
   void _delete() async {
-    _helper.startLoading(refresh);
-    try {
-      bool exists = await DatabaseInterface().exists('users', 'testUser');
-
-      if (!exists) {
-        _showMessage('ERROR', 'ERROR ON DELETE: THE RECORD DOESN`T EXIST', 'Can`t I delete the void?', Colors.red);
-      } else {
-        await DatabaseInterface().delete('users', 'testUser');
-        _showMessage('Success!', 'Record deleted Successfully!', 'I will miss it!', Colors.black);
-      }
-    } catch (e) {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
-        errorInConnectivity = true;
-        waitingForFirstConnection = true;
-        showErrorSnackbar('No Internet connection!', true);
-      }
-    }
-    _helper.stopLoading(refresh);
+    _dataRepository.deleteData(
+      'users',
+      'testUser',
+      'Record deleted Successfully!',
+      'ERROR ON DELETE: THE RECORD DOESN`T EXIST',
+      _helper,
+      refresh,
+      _showMessage,
+      _noConnectivity,
+    );
   }
 
   @override
@@ -256,19 +221,19 @@ class _HomePageState extends State<HomePage> {
         SizedBox(
           height: vstep,
         ),
-        actionButton('Create', Icons.create, _create),
+        CustomActionButton('Create', Icons.create, _create, _helper.isLoading()),
         SizedBox(
           height: vstep,
         ),
-        actionButton('Read', Icons.read_more, _read),
+        CustomActionButton('Read', Icons.read_more, _read, _helper.isLoading()),
         SizedBox(
           height: vstep,
         ),
-        actionButton('Update', Icons.update, _update),
+        CustomActionButton('Update', Icons.update, _update, _helper.isLoading()),
         SizedBox(
           height: vstep,
         ),
-        actionButton('Delete', Icons.delete, _delete),
+        CustomActionButton('Delete', Icons.delete, _delete, _helper.isLoading()),
         SizedBox(
           height: vstep,
         ),
@@ -277,24 +242,4 @@ class _HomePageState extends State<HomePage> {
           height: vstep,
         ),
       ];
-
-  actionButton(text, icon, func) => ElevatedButton(
-    style: ButtonStyle(
-      backgroundColor: MaterialStateProperty.all<Color>(Colors.amberAccent),
-      foregroundColor: MaterialStateProperty.all<Color>(Colors.black),
-    ),
-    child: Flex(direction: Axis.horizontal, children: [
-      Expanded(child: Icon(icon)),
-      Expanded(
-        flex: 3,
-        child: AutoSizeText(
-          text,
-          semanticsLabel: text,
-          maxLines: 1,
-        ),
-      ),
-    ]),
-    onPressed: _helper.isLoading() ? null : func,
-  );
-
 }

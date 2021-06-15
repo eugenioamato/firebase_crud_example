@@ -5,6 +5,8 @@ import 'firestore_stub.dart' if (dart.library.html) 'package:firebase/firebase.d
 import 'firebase_stub.dart' if (dart.library.html) 'package:firebase/firestore.dart';
 
 class DatabaseInterface {
+  const DatabaseInterface();
+
   static late Firestore fsi;
   static late StreamSubscription<dynamic> listener;
 
@@ -12,9 +14,8 @@ class DatabaseInterface {
   initializeApp() async {}
 
   /// Retrieves the database instance
-  Future<void> init(folder, Function() startListening) async {
+  Future<void> init() async {
     fsi = firestore();
-    await startListening();
   }
 
   disposeApp() {

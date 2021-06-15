@@ -1,15 +1,15 @@
 import 'dart:async';
 
 class DatabaseInterface {
-  void init(String s, Future<void> Function() startListening) {}
+  Future<void> init() async {}
 
   exists(String s, String t) {}
 
-  set(String s, String t, Map<String, String> map) {}
+  set(String s, String t, Map<String, dynamic> map) {}
 
   read(String s, String t) {}
 
-  update(String s, String t, Map<String, String> map) {}
+  update(String s, String t, Map<String, dynamic> map) {}
 
   listen(String s, void Function(dynamic events) manageEvent) {}
 

@@ -8,13 +8,16 @@ Complete guide for CRUD+E+L firebase operations in Flutter (mobile/web)
 ## Specs
 
 This project was created with the following specs:
->#android studio 4.1.2   
+>  android studio 4.1.1   
 >  Flutter 2.2.1 • channel stable • https://github.com/flutter/flutter.git
->  Framework • revision 02c026b03c (3 weeks ago) • 2021-05-27 12:24:44 -0700
+>  Framework • revision 02c026b03c
 >  Engine • revision 0fdb562ac8
 >  Tools • Dart 2.13.1
-
-  
+>  Node version v16.3.0
+>  npm version v7.15.1
+>  firebase version v9.12.1
+>  macOs version 11.4 (20F71)
+ 
   
 
 
@@ -241,29 +244,21 @@ Try to click the "CREATE" button on the app.
 
 The _create method checks first if the record exists (stopping with an error in that case), otherwise he sets data from a json map:  
 ```
-void _create() async {
-    Helper.startLoading(refresh);
-    try {
-      bool exists = await DatabaseInterface().exists('users', 'testUser');
-      if (exists) {
-        _showMessage('ERROR', 'ERROR ON CREATE: THE RECORD ALREADY EXISTS', 'Awww...', Colors.red);
-      } else {
-        await DatabaseInterface().set('users', 'testUser', {
-          'firstName': 'Sandro',
-          'lastName': 'Manzoni',
-        });
-
-        _showMessage('Success!', 'Record written Successfully', 'Ok!', Colors.black);
-      }
-    } catch (e) {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
-        errorInConnectivity = true;
-        waitingForFirstConnection = true;
-        showErrorSnackbar('No Internet connection!', true);
-      }
-    }
-
-    Helper.stopLoading(refresh);
+  void _create() {
+    _dataRepository.createData(
+      'users',
+      'testUser',
+      <String, dynamic>{
+        'firstName': 'Sandro',
+        'lastName': 'Manzoni',
+      },
+      'Record written Successfully',
+      'ERROR ON CREATE: THE RECORD ALREADY EXISTS',
+      _helper,
+      refresh,
+      _showMessage,
+      _noConnectivity,
+    );
   }
 
 ```
@@ -277,28 +272,17 @@ The method tries to read data and transforms the resulting unordered map in a `S
 If the data doesn't exist, this will result in `null`  
 
 ```
-void _read() async {
-    Helper.startLoading(refresh);
-    try {
-      Map<String, dynamic>? rec = await DatabaseInterface().read('users', 'testUser');
-
-      if (rec == null) {
-        //can only happen on mobile version
-        _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND', 'What a pity...', Colors.red);
-      } else {
-        SplayTreeMap<String, dynamic> record = SplayTreeMap.from(rec);
-        _showMessage('Success!', 'Data found: $record', 'Got it!', Colors.black);
-      }
-    } catch (e) {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
-        errorInConnectivity = true;
-        waitingForFirstConnection = true;
-        showErrorSnackbar('No Internet connection!', true);
-      } else {
-        _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND', 'What a pity...', Colors.red);
-      }
-    }
-    Helper.stopLoading(refresh);
+  void _read() async {
+    _dataRepository.readData(
+      'users',
+      'testUser',
+      'Data found',
+      'ERROR ON READ, THE RECORD WAS NOT FOUND',
+      _helper,
+      refresh,
+      _showMessage,
+      _noConnectivity,
+    );
   }
 ```
 
@@ -313,24 +297,16 @@ The exist check is necessary, because Firebase doesn't give an error when trying
 
 ```
 void _delete() async {
-    Helper.startLoading(refresh);
-    try {
-      bool exists = await DatabaseInterface().exists('users', 'testUser');
-
-      if (!exists) {
-        _showMessage('ERROR', 'ERROR ON DELETE: THE RECORD DOESN`T EXIST', 'Can`t I delete the void?', Colors.red);
-      } else {
-        await DatabaseInterface().delete('users', 'testUser');
-        _showMessage('Success!', 'Record deleted Successfully!', 'I will miss it!', Colors.black);
-      }
-    } catch (e) {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
-        errorInConnectivity = true;
-        waitingForFirstConnection = true;
-        showErrorSnackbar('No Internet connection!', true);
-      }
-    }
-    Helper.stopLoading(refresh);
+    _dataRepository.deleteData(
+      'users',
+      'testUser',
+      'Record deleted Successfully!',
+      'ERROR ON DELETE: THE RECORD DOESN`T EXIST',
+      _helper,
+      refresh,
+      _showMessage,
+      _noConnectivity,
+    );
   }
 ```
 
@@ -342,32 +318,19 @@ Click on the "UPDATE" button.
 The _update method is different from the _create, because it will attempt to write only a record that is already there, throwing an error if it is not found. Catching the error can return a string representing the problem that occurred.
 ```
 void _update() async {
-    Helper.startLoading(refresh);
-
-    try {
-      DatabaseInterface().update('users', 'testUser', {
+    _dataRepository.updateData(
+      'users',
+      'testUser',
+      {
         'firstName': 'Alessandro',
-      }).then((_) {
-        _showMessage('Success!', 'Record updated Successfully! The name is changed to Alessandro', 'Ok, thank you!',
-            Colors.black);
-        Helper.stopLoading(refresh);
-      }).catchError((e) {
-        if ((e.toString().startsWith("[cloud_firestore/not-found]")) ||
-            (e.toString().startsWith("FirebaseError: Requested entity was not found"))) {
-          _showMessage('ERROR', 'ERROR ON UPDATE, THE RECORD WAS NOT FOUND', 'Cannot update? WTF!', Colors.red);
-        } else {
-          _showMessage('ERROR', 'Error on update:${e.toString()}', 'Ok', Colors.red);
-        }
-        Helper.stopLoading(refresh);
-      });
-    } catch (e) {
-      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
-        errorInConnectivity = true;
-        waitingForFirstConnection = true;
-        showErrorSnackbar('No Internet connection!', true);
-        Helper.stopLoading(refresh);
-      }
-    }
+      },
+      'Record updated Successfully! The name is changed to Alessandro',
+      'ERROR ON UPDATE, THE RECORD WAS NOT FOUND',
+      _helper,
+      refresh,
+      _showMessage,
+      _noConnectivity,
+    );
   }
 ```
  
@@ -703,19 +666,18 @@ Doing so, (BEFORE `flutter build web`) you can be 100% sure that the client is n
 
 # Conditional imports
 
-In the main view (homepage.dart) you can see this strange import:  
+In the Data repository (data_repository.dart) you can see this strange import:  
 
 ```
 import '../services/db_interface_stub.dart'
-  if (dart.library.io)
-  '../services/database_interface.dart'
-  if (dart.library.html)
-       '../services/web_database_interface.dart';
+    if (dart.library.io) '../services/database_interface.dart'
+    if (dart.library.html) '../services/web_database_interface.dart';
+
 ```  
   
 The compiler will understand that we are compiling the project to Web because he will find the html library.  
 But, remember what we said before? The app cannot be compiled for Web if we have the cloud_firestore plugin loaded. 
-So what happens when we remove that plugin (commenting it with '#' and runing `flutter pub get` ?
+So what happens when we remove that plugin (commenting it with '#' and running `flutter pub get` ?
 The Android Studio IDE is unable to understand that we are going to work only for web, and our Dart Analysis will show a lot of errors. 
 
   
@@ -809,10 +771,8 @@ that loads a custom driver:
 
 ```
 import 'package:integration_test/integration_test_driver.dart';
-Future<void> main() {
-  integrationDriver();
-  return Future.value(true);
-}
+
+Future<void> main() => integrationDriver();
 ```  
 
 

@@ -5,6 +5,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firestore_stub.dart' if (dart.library.io) 'package:cloud_firestore/cloud_firestore.dart';
 
 class DatabaseInterface {
+  const DatabaseInterface();
+
   static late FirebaseFirestore fsi;
 
   /// Creates the Firebase connection, only needed in mobile version.
@@ -14,10 +16,9 @@ class DatabaseInterface {
   }
 
   /// Retrieves the database instance
-  Future<void> init(folder, Function() startListening) async {
+  Future<void> init() async {
     await initializeApp();
     fsi = FirebaseFirestore.instance;
-    await startListening();
   }
 
   /// Returns true if the Collection s, Document t is actually present in the DB
@@ -51,7 +52,7 @@ class DatabaseInterface {
     fsi.collection(s).doc(t).delete();
   }
 
-  StreamSubscription listen(String s, callback) {
+  listen(String s, callback) {
     return fsi.collection(s).snapshots().listen((QuerySnapshot qs) {
       callback(qs.docs.map((QueryDocumentSnapshot ss) => [ss.id, ss.data()]));
     });

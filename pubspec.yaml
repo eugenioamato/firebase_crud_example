@@ -1,13 +1,9 @@
 name: firebase_crud_example
 description: An example to show crud operations in firebase
 
-#  Flutter 2.2.1 • channel stable • https://github.com/flutter/flutter.git
-#  Framework • revision 02c026b03c (3 weeks ago) • 2021-05-27 12:24:44 -0700
-#  Engine • revision 0fdb562ac8
-#  Tools • Dart 2.13.1
+#  Flutter 2.2.1 • channel stable
 
-
-version: 1.0.14+1
+version: 1.0.15+1
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
@@ -21,7 +17,7 @@ dependencies:
   cupertino_icons: ^1.0.1
   firebase: ^9.0.1
   #only mobile. comment next line before compiling to web-release
-  cloud_firestore: ^2.2.2
+  #cloud_firestore: ^2.2.2
 
 
 dev_dependencies:
