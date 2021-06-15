@@ -1,9 +1,7 @@
-Firestore firestore() { return null;}
+firestore() {}
 
 class Firestore {
   collection(String s) {}
-
-
 }
 
 class DocumentSnapshot {
@@ -11,4 +9,3 @@ class DocumentSnapshot {
 
   data() {}
 }
-

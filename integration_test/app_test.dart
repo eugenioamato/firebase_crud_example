@@ -1,18 +1,14 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:firebase_crud_example/app.dart' as app;
 
-import 'package:firebase_crud_example/services/database_interface.dart'
-    if (dart.library.html) 'package:firebase_crud_example/services/web_database_interface.dart';
 
 /**
 TO TEST ON ANDROID, WEAROS or IOS ,
   OPEN THE SIMULATOR AND RUN NEXT COMMAND
 flutter drive --driver=test_driver/integration_driver.dart --target=integration_test/app_test.dart
 */
-
 
 ///TO TEST ON FLUTTER WEB (CHROME), INSTALL CHROMEDRIVER at:
 ///    https://chromedriver.chromium.org/downloads
@@ -21,23 +17,14 @@ flutter drive --driver=test_driver/integration_driver.dart --target=integration_
 ///chromedriver --port=4444
 ///flutter drive --driver=test_driver/integration_driver.dart --target=integration_test/app_test.dart -d web-server
 
-
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  final readButton =
-      find.widgetWithText(ElevatedButton, 'Read', skipOffstage: false);
-  final deleteButton =
-      find.widgetWithText(ElevatedButton, 'Delete', skipOffstage: false);
-  final updateButton =
-      find.widgetWithText(ElevatedButton, 'Update', skipOffstage: false);
-  final createButton =
-      find.widgetWithText(ElevatedButton, 'Create', skipOffstage: false);
+  final readButton = find.widgetWithText(ElevatedButton, 'Read', skipOffstage: false);
+  final deleteButton = find.widgetWithText(ElevatedButton, 'Delete', skipOffstage: false);
+  final updateButton = find.widgetWithText(ElevatedButton, 'Update', skipOffstage: false);
+  final createButton = find.widgetWithText(ElevatedButton, 'Create', skipOffstage: false);
 
-  setUpAll(() async {
-    await DatabaseInterface()
-        .init('users', () =>() async {});
-  });
 
   testWidgets(
       'Pressing delete button '
@@ -158,10 +145,10 @@ void main() {
     var formCaption = find.bySemanticsLabel('formCaption', skipOffstage: false);
     await tester.ensureVisible(formCaption);
 
-    expect(find.textContaining('Alessandro',skipOffstage: false), findsNWidgets(2));
+    expect(find.textContaining('Alessandro', skipOffstage: false), findsNWidgets(2));
 
     expect(
-      find.textContaining('Success',skipOffstage: false),
+      find.textContaining('Success', skipOffstage: false),
       findsOneWidget,
     );
 

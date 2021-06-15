@@ -9,10 +9,10 @@ Complete guide for CRUD+E+L firebase operations in Flutter (mobile/web)
 
 This project was created with the following specs:
 >#android studio 4.1.2   
->Flutter 2.0.0 • channel stable • https://github.com/flutter/flutter.git  
->Framework • revision 60bd88df91 (2 hours ago) • 2021-03-03 09:13:17 -0800  
->Engine • revision 40441def69  
->Tools • Dart 2.12.0  
+>  Flutter 2.2.1 • channel stable • https://github.com/flutter/flutter.git
+>  Framework • revision 02c026b03c (3 weeks ago) • 2021-05-27 12:24:44 -0700
+>  Engine • revision 0fdb562ac8
+>  Tools • Dart 2.13.1
 
   
   
@@ -54,13 +54,13 @@ Click on the Android icon to make a new entry for the app we will create here.
   
 ###### The applicationId of your Android project
 insert here  
->com.[yourcustomname].firebase_crud_example  
+>com.[yourCustomDomain].firebase_crud_example  
   
 Note that in your future projects you should replace my id (example) with your own custom company or personal name.  
 Note that you NEED to change this name in all these files:  
 ```
 Android/app/build.gradle
-Android/app/scr/Main/kotlin/com/[yourCompanyId]/firebase_crud_example/MainActivity.kt
+Android/app/scr/Main/kotlin/com/[yourCustomDomain]/firebase_crud_example/MainActivity.kt
 Android/app/src/Main/AndroidManifest.xml
 Android/app/src/Debug/AndroidManifest.xml
 Android/app/src/Profile/AndroidManifest.xml
@@ -126,7 +126,7 @@ apply plugin: 'com.google.gms.google-services'
 
 dependencies {
   // Import the Firebase BoM
-  implementation platform('com.google.firebase:firebase-bom:26.4.0')
+   implementation platform('com.google.firebase:firebase-bom:26.6.0')
 
   // Add the dependencies for the desired Firebase products
   // https://firebase.google.com/docs/android/setup#available-libraries
@@ -217,14 +217,14 @@ The listener, when no connectivity is found, will return the last state of the l
 ## Initialize Firestore
 
   
-In the mobile version, the code is launched in the first `initState` of the first view, through the `cloud_firestore: 1.0.0` plugin
+In the mobile version, the code is launched in the first `initState` of the first view, through the `cloud_firestore` plugin
 ``` 
 await initializeApp();
 fsi= FirebaseFirestore.instance;
 ```
   
 
-In the web version, the Initialization is made inside the file `index.html` , and the instance is retrieved through `firebase/firestore.dart`, in the plugin `firebase: 9.0`   
+In the web version, the Initialization is made inside the file `index.html` , and the instance is retrieved through `firebase/firestore.dart`, in the plugin `firebase`   
 ```
 fsi = firestore();
 ```
@@ -241,15 +241,30 @@ Try to click the "CREATE" button on the app.
 
 The _create method checks first if the record exists (stopping with an error in that case), otherwise he sets data from a json map:  
 ```
-bool exists = await DatabaseInterface().exists('users', 'testUser');
-if (exists) {
-      _showMessage('ERROR', 'ERROR ON CREATE: THE RECORD ALREADY EXISTS',
-          'Awww...', Colors.red);
-    } else {
-      await DatabaseInterface().set('users', 'testUser', {
-        'firstName': 'Sandro',
-        'lastName': 'Manzoni',
-      });
+void _create() async {
+    Helper.startLoading(refresh);
+    try {
+      bool exists = await DatabaseInterface().exists('users', 'testUser');
+      if (exists) {
+        _showMessage('ERROR', 'ERROR ON CREATE: THE RECORD ALREADY EXISTS', 'Awww...', Colors.red);
+      } else {
+        await DatabaseInterface().set('users', 'testUser', {
+          'firstName': 'Sandro',
+          'lastName': 'Manzoni',
+        });
+
+        _showMessage('Success!', 'Record written Successfully', 'Ok!', Colors.black);
+      }
+    } catch (e) {
+      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
+        errorInConnectivity = true;
+        waitingForFirstConnection = true;
+        showErrorSnackbar('No Internet connection!', true);
+      }
+    }
+
+    Helper.stopLoading(refresh);
+  }
 
 ```
 
@@ -262,17 +277,29 @@ The method tries to read data and transforms the resulting unordered map in a `S
 If the data doesn't exist, this will result in `null`  
 
 ```
-Map<String, dynamic> rec =
-        await DatabaseInterface().read('users', 'testUser');
+void _read() async {
+    Helper.startLoading(refresh);
+    try {
+      Map<String, dynamic>? rec = await DatabaseInterface().read('users', 'testUser');
 
-    if (rec == null) {
-      _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND',
-          'What a pity...', Colors.red);
-    } else {
-      SplayTreeMap<String, dynamic> record = SplayTreeMap.from(rec);
-      _showMessage(
-          'Success!', 'Data found: $record', 'Got it!', Colors.black);
+      if (rec == null) {
+        //can only happen on mobile version
+        _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND', 'What a pity...', Colors.red);
+      } else {
+        SplayTreeMap<String, dynamic> record = SplayTreeMap.from(rec);
+        _showMessage('Success!', 'Data found: $record', 'Got it!', Colors.black);
+      }
+    } catch (e) {
+      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
+        errorInConnectivity = true;
+        waitingForFirstConnection = true;
+        showErrorSnackbar('No Internet connection!', true);
+      } else {
+        _showMessage('Error', 'ERROR ON READ, THE RECORD WAS NOT FOUND', 'What a pity...', Colors.red);
+      }
     }
+    Helper.stopLoading(refresh);
+  }
 ```
 
 
@@ -285,16 +312,26 @@ The _delete method checks first if the record exists (returning an error if it d
 The exist check is necessary, because Firebase doesn't give an error when trying to delete something that doesn't exist.  
 
 ```
-bool exists = await DatabaseInterface().exists('users', 'testUser');
+void _delete() async {
+    Helper.startLoading(refresh);
+    try {
+      bool exists = await DatabaseInterface().exists('users', 'testUser');
 
-    if (!exists) {
-      _showMessage('ERROR', 'ERROR ON DELETE: THE RECORD DOESN`T EXIST',
-          'Can`t I delete the void?', Colors.red);
-    } else {
-      await DatabaseInterface().delete('users', 'testUser');
-      _showMessage('Success!', 'Record deleted Successfully!',
-          'I will miss it!', Colors.black);
+      if (!exists) {
+        _showMessage('ERROR', 'ERROR ON DELETE: THE RECORD DOESN`T EXIST', 'Can`t I delete the void?', Colors.red);
+      } else {
+        await DatabaseInterface().delete('users', 'testUser');
+        _showMessage('Success!', 'Record deleted Successfully!', 'I will miss it!', Colors.black);
+      }
+    } catch (e) {
+      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
+        errorInConnectivity = true;
+        waitingForFirstConnection = true;
+        showErrorSnackbar('No Internet connection!', true);
+      }
     }
+    Helper.stopLoading(refresh);
+  }
 ```
 
 
@@ -304,25 +341,34 @@ Click on the "UPDATE" button.
   
 The _update method is different from the _create, because it will attempt to write only a record that is already there, throwing an error if it is not found. Catching the error can return a string representing the problem that occurred.
 ```
-DatabaseInterface().update('users', 'testUser', {
-      'firstName': 'Alessandro',
-    }).then((_) {
-      _showMessage(
-          'Success!',
-          'Record updated Successfully! The name is changed to Alessandro',
-          'Ok, thank you!',
-          Colors.black);
-      Helper.stopLoading(context);
-    }).catchError((e) {
-      if ((e.toString().startsWith("[cloud_firestore/not-found]"))
-      || (e.toString().startsWith("FirebaseError: No document to update")))
-      {
-        _showMessage('ERROR', 'ERROR ON UPDATE, THE RECORD WAS NOT FOUND',
-            'Cannot update? WTF!', Colors.red);
-      } else
-        {
-        _showMessage('ERROR', 'Error on update:${e.toString()}', 'Ok', Colors.red);
+void _update() async {
+    Helper.startLoading(refresh);
+
+    try {
+      DatabaseInterface().update('users', 'testUser', {
+        'firstName': 'Alessandro',
+      }).then((_) {
+        _showMessage('Success!', 'Record updated Successfully! The name is changed to Alessandro', 'Ok, thank you!',
+            Colors.black);
+        Helper.stopLoading(refresh);
+      }).catchError((e) {
+        if ((e.toString().startsWith("[cloud_firestore/not-found]")) ||
+            (e.toString().startsWith("FirebaseError: Requested entity was not found"))) {
+          _showMessage('ERROR', 'ERROR ON UPDATE, THE RECORD WAS NOT FOUND', 'Cannot update? WTF!', Colors.red);
+        } else {
+          _showMessage('ERROR', 'Error on update:${e.toString()}', 'Ok', Colors.red);
+        }
+        Helper.stopLoading(refresh);
+      });
+    } catch (e) {
+      if (e.toString().startsWith('[cloud_firestore/unavailable]')) {
+        errorInConnectivity = true;
+        waitingForFirstConnection = true;
+        showErrorSnackbar('No Internet connection!', true);
+        Helper.stopLoading(refresh);
       }
+    }
+  }
 ```
  
 # Listen operation
@@ -346,32 +392,23 @@ In the event of an empty answer from the listener, we show a SnackBar with an er
 If the connectivity is gained in a second moment, we dismiss the SnackBar.  
 
 ```
-void manageEvent(events) {
-    if (waitingForFirstConnection)
-      {
-        if (events.toString()=='()')
-        {
-          ScaffoldMessenger.of(context).showSnackBar(
-             errorSnackBar
-
-          );
-          errorInConnectivity=true;
+  void manageEvent(events) {
+    if (waitingForFirstConnection) {
+      if (events.toString() == '()') {
+        showErrorSnackbar('No Internet connection!', false);
+        errorInConnectivity = true;
+      } else {
+        if (errorInConnectivity) {
+          errorInConnectivity = false;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
         }
-        else
-        {
-          if (errorInConnectivity)
-            {
-              errorInConnectivity=false;
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            }
-          waitingForFirstConnection = false;
-          Helper.stopLoading(refresh);
-        }
+        waitingForFirstConnection = false;
+        Helper.stopLoading(refresh);
       }
+    }
     _dbMessages.clear();
-    setState(() {
-      _dbMessages.addAll(events);
-    });
+    _dbMessages.addAll(events);
+    refresh();
   }
 ```
 
@@ -381,8 +418,9 @@ Canceling the subscription may happen when we logout, or when the app is closed,
 
 ```
   dispose() {
-    super.dispose();
     listener.cancel();
+    super.dispose();
+    
   }
 ```
   
@@ -441,7 +479,7 @@ The result is faster and smoother than the Android version.
 So, the only way I found to make it work properly on Flutter-Web is to remove the cloud_firestore, and use the same commands found inside the plugin Firebase.
 This forces us to comment out the plugin in pubspec.yaml before working with web plugins.  *
 Inside pubspec.yaml, comment out this line adding an '#' before it:  
-`  #cloud_firestore: ^1.0.0`
+`  #cloud_firestore: ^2.2.2`
   
 and run
 `flutter pub get`
@@ -510,9 +548,9 @@ to import the configuration and initialize the app, with the analytics (only if 
   
 You will also need in your BODY section the following imports:  
   
->  <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>  
->  <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-firestore.js"></script>  
->  <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-analytics.js"></script>  
+>  <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-app.js"></script>  
+>  <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-firestore.js"></script>  
+>  <script src="https://www.gstatic.com/firebasejs/8.6.7/firebase-analytics.js"></script>  
 
 Remember that, in case your app requires other libraries, you can find them on this website:  
 >https://firebase.google.com/docs/web/setup#available-libraries  
@@ -655,10 +693,10 @@ In index.html the line
 ` <script src="main.dart.js" type="application/javascript"></script>`
   
 can be edited without breaking the app, adding a fake prop to the call in this way:  
-` <script src="main.dart.js?version=1.0.5" type="application/javascript"></script>`
+` <script src="main.dart.js?version=1.0.13+1" type="application/javascript"></script>`
 
 So, everytime you upload a new version of your web app, you should go up by 1 in this line, and, for coherence, in the third line of your pubspec.yaml  
-`version: 1.0.5`. (not mandatory)  
+`version: 1.0.13+1`. (not mandatory)  
   
 This will force the evil browsers to reload the entire app.  
 Doing so, (BEFORE `flutter build web`) you can be 100% sure that the client is not using an outdated version.  

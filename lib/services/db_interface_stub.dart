@@ -1,7 +1,6 @@
 import 'dart:async';
 
-class DatabaseInterface
-{
+class DatabaseInterface {
   void init(String s, Future<void> Function() startListening) {}
 
   exists(String s, String t) {}
@@ -12,10 +11,7 @@ class DatabaseInterface
 
   update(String s, String t, Map<String, String> map) {}
 
-  StreamSubscription listen(String s, void Function(dynamic events) manageEvent) {
-    return null;
-  }
+  listen(String s, void Function(dynamic events) manageEvent) {}
 
   delete(String s, String t) {}
-  
 }
