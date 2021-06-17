@@ -43,8 +43,8 @@ class DataRepository {
         showMessage('ERROR', errorString, 'Awww...', Colors.red);
       } else {
         await _database.set(
-          'users',
-          'testUser',
+          folder,
+          record,
           data,
         );
 
